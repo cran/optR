@@ -64,7 +64,8 @@ optR.gauss<-function(A, b, tol=1e-7){
 #' @param tol       : tolerance
 #' @return A        : Updated Matrix
 #' @return b.order  : Order sequence of A updated  matrix
-#' #' A<-matrix(c(0,-1,1, -1,2,-1,2,-1,0), nrow=3,ncol=3, byrow = TRUE)
+#' @examples
+#' A<-matrix(c(0,-1,1, -1,2,-1,2,-1,0), nrow=3,ncol=3, byrow = TRUE)
 #' b<-matrix(c(0,0, 1), nrow=3,ncol=1,byrow=TRUE)
 #' Z<-optR(A, b, method="gauss")
 opt.matrix.reorder<-function(A, tol=1e-16){

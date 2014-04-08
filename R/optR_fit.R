@@ -31,10 +31,7 @@ optR.fit<-function(x, y=NULL, method=c("gauss, LU, gaussseidel", "cgm"), iter=50
     optR$beta<-Z$beta
   } else if (method=="LU" & nrow(x)==ncol(x)) {
     Z<-LU.optR(x, y, tol)
-    optR$U<-Z$U
-    optR$c<-Z$c
-    optR$beta<-Z$beta
-    optR$seq<-Z$seq
+    optR<-assign.values(Z)
   } else if (method=="gaussseidel" & nrow(x)==ncol(x)) {
     Z<-gaussSeidel(x, y, iter=iter, tol=tol)
     optR$beta<-Z$optimal
@@ -47,42 +44,24 @@ optR.fit<-function(x, y=NULL, method=c("gauss, LU, gaussseidel", "cgm"), iter=50
     optR$initial.values<-Z$initial
     optR$itr.conv<-Z$itr.conv
     optR$conv<-Z$conv
+  } else if(method=="choleski" & nrow(x)==ncol(x)) {
+    Z<-choleskilm(x, y, tol=tol)
+    optR<-assign.values(Z)
+  } else
+  {
+    stop("Method does found...")
   }
   class(optR)<-"optR"
   optR
 }
 
 
-#' Prediction function based on optR class  
-#'
-#'@description Function for making predictions using OptR class
-#'@param object     : optR class fitted object
-#'@param newdata       : data for prediction 
-#'@param na.action  : action for missing values
-#'@param ...        : S3 class
-#'@return fitted.val   : Predicted values
-#'@return terms       : terms used for fitting
-#'@export
-predict.optR<-function(object, newdata, na.action=na.omit, ...) {  
-  # Extract terms used into the model
-  tt<-terms(object)
-  if (!inherits(object, "optR")) 
-    warning("calling predict.lm(<fake-optR-object>) ...")
-  if (missing(newdata) || is.null(newdata)) {
-    stop("Missing or Null dataset ...")
-  } else 
-  {
-    Terms <- delete.response(tt)
-    m <- model.frame(Terms, newdata, na.action = na.action, xlev = object$xlevels)
-    beta <- object$beta
-    predictor<-as.matrix(m)%*%as.matrix(beta)
-  }
-  
-  # Extract terms from newdata
-  xterms<-colnames(m)
-  
-  
-  # Return predicted values
-  return(list("fitted.val" = predictor, "terms"=xterms))
+# Function assigns values for LU and Choleski decomposition
+assign.values<-function(Z){
+  optR<-list()
+  optR$U<-Z$U
+  optR$c<-Z$c
+  optR$beta<-Z$beta
+  optR$seq<-Z$seq
+  return(optR)
 }
-  

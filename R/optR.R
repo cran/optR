@@ -48,8 +48,8 @@ optR<-function(x, ...) UseMethod("optR")
 #' @export
 #' @examples
 #' # Solving equation Ax=b
-#' A<-matrix(c(6,-4,1, -4,6,-4,1,-4,6), nrow=3,ncol=3, byrow = TRUE)
 #' b<-matrix(c(-14,36, 6), nrow=3,ncol=1,byrow=TRUE)
+#' A<-matrix(c(6,-4,1, -4,6,-4,1,-4,6), nrow=3,ncol=3, byrow = TRUE)
 #' Z<-optR(b~A-1, method="gauss") # -1 to remove the constant vector
 #' 
 #' Z<-optR(b~A-1, method="LU") # -1 to remove the constant vector
@@ -62,7 +62,7 @@ optR<-function(x, ...) UseMethod("optR")
 #' data<-cbind(X, y)
 #' colnames(data)<-c("var1", "var2", "var3", "var4", "y")
 #' Z<-optR(y~var1+var2+var3+var4+var1*var2-1, data=data.frame(data), method="cgm")
-optR.formula<-function(formula, data=list(), method=c("gauss, LU, gaussseidel", "cgm"), iter=500, tol=1e-7, ...)
+optR.formula<-function(formula, data=list(), method=c("gauss, LU, gaussseidel", "cgm", "choleski"), iter=500, tol=1e-7, ...)
 {
   # Parse the call
   cl <- match.call()
@@ -77,6 +77,9 @@ optR.formula<-function(formula, data=list(), method=c("gauss, LU, gaussseidel", 
   mt <- attr(mf, "terms")
   x <- model.matrix(mt, mf, contrasts)
   y<-model.response(mf, "numeric")
+  
+  # Default Method
+  if(length(method)>1) method="cgm"
   
   # Fit Models
   nROWx=nrow(x)
@@ -95,7 +98,6 @@ optR.formula<-function(formula, data=list(), method=c("gauss, LU, gaussseidel", 
   optR$xlevels <- .getXlevels(mt, mf)
   optR$terms <- mt
   optR$call<-cl
-  print(method)
   optR$method<-method
   class(optR)<-"optR"
   optR

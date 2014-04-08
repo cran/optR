@@ -9,7 +9,6 @@ optR.backsubsitution<-function(U, c) {
   beta<-matrix(rep(0, each=nROW), nrow=nROW, byrow=T)
   for(i in seq(nROW, 1, by=-1)) {
     if(U[i,i]!=0) {
-      
       beta[i]<-(c[i] - apply(beta*U[i,], 2, sum))/U[i,i]
     } else
     {

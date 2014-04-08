@@ -14,13 +14,20 @@ inv.optR<-function(A, tol=1e-7){
   nCOL<-ncol(A)
   b<-diag(nCOL)
   A<-optR(A, method="LU")
-  for(i in 1:nCOL){
-    y<-forwardsubsitution.optR(A$U, b[A$seq,i])
-    b[,i]<-optR.backsubsitution(A$U, y)
-  }
+  
+  # Solve the inverse Equations
+  b<-lapply(1:nCOL, 
+        FUN=function(i, A, b){
+            y<-forwardsubsitution.optR(A$U, b[A$seq,i])
+            c<-optR.backsubsitution(A$U, y)
+            return(c)
+            }, A, b)
+  
+  b<-matrix(unlist(b), nrow=nCOL, ncol=nCOL, byrow=FALSE)
   b<-machinePrecision(b) # Machine precision
   return(b)
 }
+
 
 #' Function to address machine precision error
 #' 

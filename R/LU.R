@@ -12,6 +12,7 @@
 #' b<-matrix(c(0,0, 1), nrow=3,ncol=1,byrow=TRUE)
 #' Z<-optR(A, b, method="LU")
 LU.optR<-function(A, b, tol=1e-7){
+  method="LU"
   # Matrix check
   if(!is.matrix(b) & !is.null(b)) b<-as.matrix(b)
   
@@ -21,7 +22,7 @@ LU.optR<-function(A, b, tol=1e-7){
   seq<-A_ordered$b.order
   rm(A_ordered)
     
-    # Re-order b if it is not NULL
+  # Re-order b if it is not NULL
   if(!is.null(b)){
       b<-b[seq, ]  
   }    
@@ -29,7 +30,15 @@ LU.optR<-function(A, b, tol=1e-7){
     
   
   # LU decompose
-  A<-LU.decompose(A, tol=1e-7)
+  if(method=="choleski"){
+    A<-choleskiDecomposition(A, tol)
+    A<-A+t(A)
+    diag(A)<-diag(A)/2
+  } else
+  {
+    A<-LU.decompose(A, tol)
+  }
+  
   
   if(!is.null(b)){
     if(!is.matrix(b)) b<-as.matrix(b)
