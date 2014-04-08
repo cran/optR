@@ -1,0 +1,8 @@
+S3method(optR,default)
+S3method(optR,formula)
+S3method(predict,optR)
+S3method(print,optR)
+S3method(summary,optR)
+export(LUsplit)
+export(inv.optR)
+export(optR)
