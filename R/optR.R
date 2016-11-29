@@ -1,3 +1,12 @@
+.onAttach <- function(lib, pkg)
+{
+  vers <- library(help=optR)$info[[1]]
+  vers <- vers[grep("Version:",vers)]
+  # vers <- rev(strsplit(vers," ")[[1]])[1]
+  packageStartupMessage(paste("Loaded optR",vers))
+}
+
+
 #' Optimization & predictive modelling Toolsets
 #' 
 #' @description optR function for solving linear systems using numerical approaches. 
@@ -32,14 +41,18 @@
 optR<-function(x, ...) UseMethod("optR")
 
 
+
 #' Optimization & predictive modelling Toolsets 
 #' 
 #' @description optR package to perform the optimization using numerical methods
 #' @param formula   : formula to build model
 #' @param data      : data used to build model
+#' @param weights   : Observation weights
 #' @param method    : "gauss" for gaussian elimination and "LU" for LU factorization
 #' @param iter  : Number of Iterations
 #' @param tol   : Convergence tolerance 
+#' @param keep.data : If TRUE returns input data
+#' @param contrasts : Data frame contract values
 #' @param ...   : S3 Class
 #' @return U        : Decomposed matrix for Gauss-ELimination Ax=b is converted into Ux=c where U is upper triangular matrix for LU decomposition U contain the values for L & U decomposition LUx=b
 #' @return c        : transformed b & for LU transformation c is y from equation Ux=y
@@ -62,12 +75,14 @@ optR<-function(x, ...) UseMethod("optR")
 #' data<-cbind(X, y)
 #' colnames(data)<-c("var1", "var2", "var3", "var4", "y")
 #' Z<-optR(y~var1+var2+var3+var4+var1*var2-1, data=data.frame(data), method="cgm")
-optR.formula<-function(formula, data=list(), method=c("gauss, LU, gaussseidel", "cgm", "choleski"), iter=500, tol=1e-7, ...)
+#' 
+optR.formula<-function(formula, data=list(), weights=NULL, method=c("gauss, LU, gaussseidel", "cgm", "choleski"), 
+                       iter=500, tol=1e-7, keep.data=TRUE, contrasts=NULL, ...)
 {
   # Parse the call
   cl <- match.call()
   mf <- match.call(expand.dots = FALSE)
-  m <- match(c("formula", "data", "subset", "na.action"), names(mf), 0L)
+  m <- match(c("formula", "data", "subset", "weights", "na.action"), names(mf), 0L)
   mf <- mf[c(1L, m)]
   mf$drop.unused.levels <- TRUE
   mf[[1L]] <- as.name("model.frame")
@@ -75,9 +90,28 @@ optR.formula<-function(formula, data=list(), method=c("gauss, LU, gaussseidel", 
   
   # Extract data
   mt <- attr(mf, "terms")
-  x <- model.matrix(mt, mf, contrasts)
+  x <- model.matrix(mt, mf, contrasts)  
   y<-model.response(mf, "numeric")
+  w <- as.vector(model.weights(mf))
+  if (!is.null(w) && !is.numeric(w)) 
+    stop("'weights' must be a numeric vector")
   
+  if(keep.data) {
+    xini <- x
+    yini <- y
+    wini<-w
+  }
+  
+  if(!is.null(w)) {
+    weights.update<-updateWeightsobs(x, y, w)
+    rm(list=c("x", "y", "w"))
+    x<-weights.update$x
+    y<-weights.update$y
+    w<-weights.update$weights
+    rm("weights.update")
+  }
+ 
+
   # Default Method
   if(length(method)>1) method="cgm"
   
@@ -92,7 +126,11 @@ optR.formula<-function(formula, data=list(), method=c("gauss, LU, gaussseidel", 
     optR<-optR.fit(x, y, method, iter, tol) # Fit optimization method
   }
   
-  
+  if(keep.data) {
+    optR$x <- xini
+    optR$y <- yini
+    optR$w <- wini
+  }
   optR$formula<-formula
   optR$na.action <- attr(mf, "na.action")
   optR$xlevels <- .getXlevels(mt, mf)
@@ -105,14 +143,17 @@ optR.formula<-function(formula, data=list(), method=c("gauss, LU, gaussseidel", 
 }
 
 
+
 #' Optimization & predictive modelling Toolsets
 #' 
-#' optR is the default function for optimization
+#' @description soptR is the default function for optimization
 #' @param x     : Input data frame
 #' @param y     : Response is data frame
+#' @param weights : Observation weights
 #' @param method  : "gauss" for gaussian elimination and "LU" for LU factorization
 #' @param iter  : Number of Iterations
 #' @param tol   : Convergence tolerance
+#' @param keep.data : Returns Input dataset in object
 #' @param ...   : S3 Class
 #' @return U    : Decomposed matrix for Gauss-ELimination Ax=b is converted into Ux=c where U is upper triangular matrix for LU decomposition U contain the values for L & U decomposition LUx=b   
 #' @return c    : transformed b & for LU transformation c is y from equation Ux=y
@@ -137,7 +178,8 @@ optR.formula<-function(formula, data=list(), method=c("gauss, LU, gaussseidel", 
 #' X <- matrix(rnorm(n * p), n, p) # no intercept!
 #' y <- rnorm(n)
 #' Z<-optR(X, y, method="LU")
-optR.default<-function(x, y=NULL, method=c("gauss, LU, gaussseidel", "cgm"), iter=500, tol=1e-7, ...){
+optR.default<-function(x, y=NULL, weights=NULL, method=c("gauss", "LU", "gaussseidel", "cgm", "choleski"), 
+                       iter=500, tol=1e-7, keep.data=TRUE, ...){
   
   if(!is.data.frame(x)) x<-data.frame(x)
   if(!is.data.frame(y)) y<-data.frame(y)
@@ -157,17 +199,18 @@ optR.default<-function(x, y=NULL, method=c("gauss, LU, gaussseidel", "cgm"), ite
       warning("b is NULL matrix!!! switching to LU factorization for A decomposition to LU")
     }
     modelf<-as.formula(paste0("~", paste0(colnames(x), collapse="+"), "-1", sep=""))
-    optR<-optR(modelf, data=x, method="LU", iter, tol)
+    optR<-optR(modelf, data=x, weights=weights, method="LU", iter, tol, keep.data=keep.data)
   } else
   {
     modelf<-as.formula(paste0(colnames(y), "~", paste0(colnames(x), collapse="+"), "-1", sep=""))
-    optR<-optR(modelf, data=cbind.data.frame(x, y), method=method, iter, tol)
+    optR<-optR(modelf, data=cbind.data.frame(x, y), weights=weights, method=method, iter, tol, keep.data=keep.data)
   }
 
   class(optR)<-"optR"
   optR$call<-match.call()
   optR 
 }
+
 
 #' print coefficients for optR class
 #' 

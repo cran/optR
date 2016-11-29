@@ -9,8 +9,7 @@ forwardsubsitution.Cholesky<-function(L, b) {
     } else
     {
       y[k]<-(y[k]-sum(L[k,1:(k-1)]*y[1:(k-1)])) # NAN values replacement
-    }
-    
+    } 
   }
   return(y)
 }

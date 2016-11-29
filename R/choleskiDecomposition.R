@@ -58,6 +58,7 @@ choleskilm<-function(A, b, tol=1e-7){
 #' @export
 #' @examples
 #' A<-matrix(c(4,-2,2, -2,2,-4,2,-4,11), nrow=3,ncol=3, byrow = TRUE)
+#' chdA<-choleskiDecomposition(A)
 choleskiDecomposition<-function(A, tol=1e-7){
   nROW<-ncol(A)
   L<-matrix(rep(0, each=nROW*nROW), nrow = nROW, byrow=T)
